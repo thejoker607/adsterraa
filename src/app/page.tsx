@@ -1,69 +1,105 @@
-import Image from "next/image";
+import Link from "next/link";
+import {
+  Sparkles,
+  Shield,
+  Coins,
+  Megaphone,
+  Play,
+  ArrowRight,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen">
+      <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <span className="text-lg font-bold">AdPromo</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/login">
+              <Button variant="ghost">Login</Button>
+            </Link>
+            <Link href="/register">
+              <Button>Get Started</Button>
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+      </header>
+
+      <main>
+        <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
+          <div className="mx-auto max-w-3xl text-center">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-1.5 text-sm font-medium text-indigo-700 ring-1 ring-indigo-200">
+              <Shield className="h-4 w-4" />
+              Legitimate promotions only — no artificial traffic
+            </div>
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+              Promote your links with{" "}
+              <span className="text-indigo-600">real engagement</span>
+            </h1>
+            <p className="mt-6 text-lg text-slate-600">
+              AdPromo is a fair platform where users publish clearly labeled
+              promotions, earn coins through legitimate activities, and discover
+              content through the Runner — never through bots or fake clicks.
+            </p>
+            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Link href="/register">
+                <Button size="lg" className="w-full sm:w-auto">
+                  Create Account
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Link href="/login">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                  Sign In
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-slate-200 bg-white py-20">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:grid-cols-3 sm:px-6">
+            {[
+              {
+                icon: Megaphone,
+                title: "Publish Promotions",
+                desc: "Submit your URL with a clear title and description. Spend coins to reach real viewers.",
+              },
+              {
+                icon: Play,
+                title: "Runner Sessions",
+                desc: "View labeled promotions one at a time. Earn coins for completing legitimate view sessions.",
+              },
+              {
+                icon: Coins,
+                title: "Fair Coin Economy",
+                desc: "Earn through daily logins, tasks, and referrals. Transparent pricing configured by admins.",
+              },
+            ].map((feature) => (
+              <div
+                key={feature.title}
+                className="rounded-xl border border-slate-200 p-6 shadow-sm"
+              >
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                  <feature.icon className="h-5 w-5" />
+                </div>
+                <h3 className="font-semibold text-slate-900">{feature.title}</h3>
+                <p className="mt-2 text-sm text-slate-600">{feature.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </main>
+
+      <footer className="border-t border-slate-200 py-8 text-center text-sm text-slate-500">
+        AdPromo — All promotions are clearly labeled. No artificial ad traffic.
+      </footer>
     </div>
   );
 }

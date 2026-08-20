@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AdPromo</string>
+    <string name="title_activity_main">AdPromo</string>
+    <string name="package_name">com.adpromo.app</string>
+    <string name="custom_url_scheme">com.adpromo.app</string>
+</resources>
