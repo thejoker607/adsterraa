@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorMessage } from "@/components/ui/states";
@@ -21,36 +20,25 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    if (
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ) {
-      setError(
-        "Supabase is not configured. Check .env.local and restart the dev server (npm run dev)."
-      );
-      setLoading(false);
-      return;
-    }
-
     try {
-      const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
+      const data = await res.json();
+      setLoading(false);
+
+      if (!res.ok) {
+        setError(data.error || "Invalid credentials");
         return;
       }
 
-      router.push("/dashboard");
+      router.push(data.redirect || "/dashboard");
       router.refresh();
     } catch {
-      setError(
-        "Could not reach Supabase. Check your internet connection, verify .env.local keys, and restart the dev server."
-      );
+      setError("Could not connect. Check your internet and try again.");
       setLoading(false);
     }
   }
@@ -98,12 +86,6 @@ export default function LoginPage() {
           Don&apos;t have an account?{" "}
           <Link href="/register" className="font-medium text-indigo-600 hover:underline">
             Register
-          </Link>
-        </p>
-        <p className="mt-2 text-center text-xs text-slate-500">
-          Admin login is separate:{" "}
-          <Link href="/admin/login" className="text-indigo-600 hover:underline">
-            /admin/login
           </Link>
         </p>
       </div>

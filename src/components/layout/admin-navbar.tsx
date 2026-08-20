@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   X,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ const adminNav = [
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/admin/config", label: "Configuration", icon: Settings },
+  { href: "/admin/account", label: "Account", icon: UserCircle },
 ];
 
 export function AdminNavbar({ adminName }: { adminName: string }) {
@@ -29,7 +31,7 @@ export function AdminNavbar({ adminName }: { adminName: string }) {
 
   async function handleLogout() {
     await fetch("/api/admin/logout", { method: "POST" });
-    router.push("/admin/login");
+    router.push("/login");
     router.refresh();
   }
 

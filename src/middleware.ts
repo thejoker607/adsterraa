@@ -26,34 +26,36 @@ export async function middleware(request: NextRequest) {
   const publicPaths = ["/", "/login", "/register"];
   const isPublic = publicPaths.includes(pathname);
   const isAdminRoute = pathname.startsWith("/admin");
-  const isAdminLogin = pathname === "/admin/login";
+  const isLegacyAdminLogin = pathname === "/admin/login";
   const isApiRoute = pathname.startsWith("/api");
 
   try {
-    // API routes — no page-level auth redirects
+    if (isLegacyAdminLogin) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
     if (isApiRoute) {
       return NextResponse.next();
     }
 
-    // Admin routes — separate auth, no Supabase needed
-    if (isAdminRoute) {
-      const adminValid = await isValidAdminSession(request);
+    const adminValid = await isValidAdminSession(request);
 
-      if (isAdminLogin && adminValid) {
+    if (pathname === "/login" || pathname === "/register") {
+      if (adminValid) {
         return NextResponse.redirect(new URL("/admin", request.url));
       }
+    }
 
-      if (!isAdminLogin && !adminValid) {
-        return NextResponse.redirect(new URL("/admin/login", request.url));
+    if (isAdminRoute) {
+      if (!adminValid) {
+        return NextResponse.redirect(new URL("/login", request.url));
       }
-
       return NextResponse.next();
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    // Supabase not configured on Vercel — allow public pages, block the rest
     if (!supabaseUrl || !supabaseAnonKey) {
       if (!isPublic) {
         return NextResponse.redirect(new URL("/login", request.url));
@@ -96,13 +98,12 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     console.error("[middleware]", pathname, error);
 
-    // Never crash the whole site — fall back gracefully
-    if (isPublic || isAdminLogin) {
+    if (isPublic || pathname === "/login") {
       return NextResponse.next();
     }
 
     if (isAdminRoute) {
-      return NextResponse.redirect(new URL("/admin/login", request.url));
+      return NextResponse.redirect(new URL("/login", request.url));
     }
 
     return NextResponse.redirect(new URL("/login", request.url));

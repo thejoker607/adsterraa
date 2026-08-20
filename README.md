@@ -70,7 +70,7 @@ Open [http://localhost:3000](http://localhost:3000)
 |-------|-------------|
 | `/` | Landing page |
 | `/register` | User registration |
-| `/login` | User login |
+| `/login` | User & admin login (same page) |
 | `/dashboard` | User dashboard |
 | `/runner` | Promotion Runner |
 | `/promotions/create` | Create promotion |
@@ -78,11 +78,12 @@ Open [http://localhost:3000](http://localhost:3000)
 | `/wallet` | Coin wallet |
 | `/premium` | Premium tiers |
 | `/profile` | User profile |
-| `/admin/login` | Admin login |
-| `/admin` | Admin overview |
+| `/admin/config` | Platform configuration |
+
+**Note:** Admin and user accounts both sign in at `/login`. Admins are redirected to `/admin` automatically.
 | `/admin/users` | User management |
 | `/admin/campaigns` | Campaign review |
-| `/admin/config` | Platform configuration |
+| `/admin/account` | Admin account settings |
 
 ## Testing Checklist
 

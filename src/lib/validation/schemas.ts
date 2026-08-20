@@ -45,6 +45,22 @@ export const adminLoginSchema = z.object({
   password: z.string().min(1),
 });
 
+export const adminAccountUpdateSchema = z
+  .object({
+    name: z.string().min(2, "Name must be at least 2 characters").max(100).optional(),
+    email: z.string().email("Invalid email").optional(),
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/[A-Z]/, "Password must contain an uppercase letter")
+      .regex(/[0-9]/, "Password must contain a number")
+      .optional(),
+  })
+  .refine((data) => data.name || data.email || data.newPassword, {
+    message: "Change at least one field (name, email, or password)",
+  });
+
 export const coinAdjustSchema = z.object({
   userId: z.string().uuid(),
   amount: z.number().int().refine((n) => n !== 0, "Amount cannot be zero"),
