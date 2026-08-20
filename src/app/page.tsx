@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 export default function HomePage() {
   return (
     <div className="min-h-screen">
-      <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
+      <header className="safe-top border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">

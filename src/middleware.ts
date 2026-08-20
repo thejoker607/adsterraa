@@ -2,19 +2,68 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { jwtVerify } from "jose";
 
-const ADMIN_JWT_SECRET = new TextEncoder().encode(
-  process.env.ADMIN_JWT_SECRET || "dev-admin-secret-change-me"
-);
+function getAdminJwtSecret() {
+  return new TextEncoder().encode(
+    process.env.ADMIN_JWT_SECRET || "dev-admin-secret-change-me"
+  );
+}
+
+async function isValidAdminSession(request: NextRequest): Promise<boolean> {
+  const adminToken = request.cookies.get("adpromo_admin_session")?.value;
+  if (!adminToken) return false;
+
+  try {
+    await jwtVerify(adminToken, getAdminJwtSecret());
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  let supabaseResponse = NextResponse.next({ request });
+  const publicPaths = ["/", "/login", "/register"];
+  const isPublic = publicPaths.includes(pathname);
+  const isAdminRoute = pathname.startsWith("/admin");
+  const isAdminLogin = pathname === "/admin/login";
+  const isApiRoute = pathname.startsWith("/api");
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  try {
+    // API routes — no page-level auth redirects
+    if (isApiRoute) {
+      return NextResponse.next();
+    }
+
+    // Admin routes — separate auth, no Supabase needed
+    if (isAdminRoute) {
+      const adminValid = await isValidAdminSession(request);
+
+      if (isAdminLogin && adminValid) {
+        return NextResponse.redirect(new URL("/admin", request.url));
+      }
+
+      if (!isAdminLogin && !adminValid) {
+        return NextResponse.redirect(new URL("/admin/login", request.url));
+      }
+
+      return NextResponse.next();
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    // Supabase not configured on Vercel — allow public pages, block the rest
+    if (!supabaseUrl || !supabaseAnonKey) {
+      if (!isPublic) {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+      return NextResponse.next();
+    }
+
+    let supabaseResponse = NextResponse.next({ request });
+
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -29,56 +78,35 @@ export async function middleware(request: NextRequest) {
           );
         },
       },
+    });
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user && !isPublic) {
+      return NextResponse.redirect(new URL("/login", request.url));
     }
-  );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    if (user && (pathname === "/login" || pathname === "/register")) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
 
-  const publicPaths = ["/", "/login", "/register"];
-  const isPublic = publicPaths.includes(pathname);
-  const isAdminRoute = pathname.startsWith("/admin");
-  const isAdminLogin = pathname === "/admin/login";
-  const isApiRoute = pathname.startsWith("/api");
-
-  if (isApiRoute) {
     return supabaseResponse;
-  }
+  } catch (error) {
+    console.error("[middleware]", pathname, error);
 
-  if (isAdminRoute) {
-    const adminToken = request.cookies.get("adpromo_admin_session")?.value;
-    let adminValid = false;
-
-    if (adminToken) {
-      try {
-        await jwtVerify(adminToken, ADMIN_JWT_SECRET);
-        adminValid = true;
-      } catch {
-        adminValid = false;
-      }
+    // Never crash the whole site — fall back gracefully
+    if (isPublic || isAdminLogin) {
+      return NextResponse.next();
     }
 
-    if (isAdminLogin && adminValid) {
-      return NextResponse.redirect(new URL("/admin", request.url));
-    }
-
-    if (!isAdminLogin && !adminValid) {
+    if (isAdminRoute) {
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
 
-    return supabaseResponse;
-  }
-
-  if (!user && !isPublic) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
-
-  if (user && (pathname === "/login" || pathname === "/register")) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
-  return supabaseResponse;
 }
 
 export const config = {

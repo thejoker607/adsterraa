@@ -38,19 +38,19 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-900 px-4">
+    <div className="safe-screen flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500 text-white">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white">
             <Shield className="h-6 w-6" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
-          <p className="text-slate-400">Secure administrator access</p>
+          <h1 className="text-2xl font-bold text-slate-900">Admin Panel</h1>
+          <p className="text-slate-600">Secure administrator access</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-xl border border-slate-700 bg-slate-800 p-6 space-y-4"
+          className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
         >
           {error && <ErrorMessage message={error} />}
           <Input
@@ -59,7 +59,6 @@ export default function AdminLoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="bg-slate-900 border-slate-600 text-white"
           />
           <Input
             label="Password"
@@ -67,7 +66,6 @@ export default function AdminLoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="bg-slate-900 border-slate-600 text-white"
           />
           <Button type="submit" className="w-full" loading={loading}>
             Sign In

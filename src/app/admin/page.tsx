@@ -37,15 +37,15 @@ export default async function AdminOverviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Admin Overview</h1>
-        <p className="text-slate-400">Platform statistics and management.</p>
+        <h1 className="text-2xl font-bold text-slate-900">Admin Overview</h1>
+        <p className="text-slate-600">Platform statistics and management.</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <Card key={stat.label} className="border-slate-700 bg-slate-800 !p-4">
-            <p className="text-sm text-slate-400">{stat.label}</p>
-            <p className="text-2xl font-bold text-white">{stat.value}</p>
+          <Card key={stat.label} className="!p-4">
+            <p className="text-sm text-slate-500">{stat.label}</p>
+            <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
           </Card>
         ))}
       </div>

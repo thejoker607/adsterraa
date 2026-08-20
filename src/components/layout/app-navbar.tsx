@@ -43,7 +43,7 @@ export function AppNavbar({ coinBalance }: { coinBalance?: number }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
+    <header className="safe-top sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-3">
           <button

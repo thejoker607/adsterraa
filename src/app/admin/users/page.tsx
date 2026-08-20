@@ -71,23 +71,23 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">User Management</h1>
-        <p className="text-slate-400">Approve, block, and manage user accounts.</p>
+        <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
+        <p className="text-slate-600">Approve, block, and manage user accounts.</p>
       </div>
 
       <div className="space-y-4">
         {users.map((user) => (
-          <Card key={user.id} className="border-slate-700 bg-slate-800">
+          <Card key={user.id}>
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-white">
+                  <h3 className="font-semibold text-slate-900">
                     {user.full_name || user.email}
                   </h3>
                   {statusBadge(user.account_status)}
                   <Badge variant="premium">{user.premium_tier}</Badge>
                 </div>
-                <p className="text-sm text-slate-400">{user.email}</p>
+                <p className="text-sm text-slate-600">{user.email}</p>
                 <p className="text-sm text-slate-500">
                   {user.coin_balance} coins · Joined {formatDate(user.created_at)}
                 </p>

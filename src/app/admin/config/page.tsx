@@ -67,14 +67,14 @@ export default function AdminConfigPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Platform Configuration</h1>
-        <p className="text-slate-400">Configure coin rewards, pricing, and cooldowns.</p>
+        <h1 className="text-2xl font-bold text-slate-900">Platform Configuration</h1>
+        <p className="text-slate-600">Configure coin rewards, pricing, and cooldowns.</p>
       </div>
 
       {success && <SuccessMessage message={success} />}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Coin Rewards" className="border-slate-700 bg-slate-800">
+        <Card title="Coin Rewards">
           <div className="space-y-3">
             {Object.entries(rewards).map(([key, val]) => (
               <Input
@@ -90,7 +90,7 @@ export default function AdminConfigPage() {
           </div>
         </Card>
 
-        <Card title="Campaign Pricing" className="border-slate-700 bg-slate-800">
+        <Card title="Campaign Pricing">
           <Input
             label="Coins per 100 impressions"
             type="number"
@@ -103,7 +103,7 @@ export default function AdminConfigPage() {
           />
         </Card>
 
-        <Card title="Cooldown Periods (minutes)" className="border-slate-700 bg-slate-800">
+        <Card title="Cooldown Periods (minutes)">
           <div className="space-y-3">
             <Input
               label="Free tier"
@@ -132,7 +132,7 @@ export default function AdminConfigPage() {
           </div>
         </Card>
 
-        <Card title="Runner Settings" className="border-slate-700 bg-slate-800">
+        <Card title="Runner Settings">
           <div className="space-y-3">
             <Input
               label="Required view seconds"

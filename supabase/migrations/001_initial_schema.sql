@@ -49,7 +49,7 @@ CREATE TABLE public.campaigns (
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   target_impressions INTEGER NOT NULL CHECK (target_impressions > 0),
   current_impressions INTEGER NOT NULL DEFAULT 0 CHECK (current_impressions >= 0),
-  coin_cost INTEGER NOT NULL CHECK (coin_cost > 0),
+  coin_cost INTEGER NOT NULL CHECK (coin_cost >= 0),
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending', 'approved', 'rejected', 'active', 'completed', 'cancelled')),
   last_started_at TIMESTAMPTZ,
