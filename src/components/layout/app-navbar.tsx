@@ -29,6 +29,10 @@ export function AppNavbar({ coinBalance }: { coinBalance?: number }) {
   const premiumActive =
     pathname === "/premium" || pathname.startsWith("/premium/");
 
+  if (pathname === "/dashboard") {
+    return null;
+  }
+
   return (
     <header className="safe-top sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6">

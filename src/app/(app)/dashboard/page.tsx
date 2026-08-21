@@ -1,184 +1,230 @@
 import { requireApprovedUser } from "@/lib/auth/user";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Card } from "@/components/ui/card";
-import { Badge, statusBadge } from "@/components/ui/badge";
-import { formatCoins, formatDate } from "@/lib/utils";
-import {
-  Coins,
-  Megaphone,
-  Activity,
-  Gift,
-  Crown,
-} from "lucide-react";
+import { formatCoins } from "@/lib/utils";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { DailyLoginButton } from "@/components/dashboard/daily-login-button";
+import { Sparkles } from "lucide-react";
+
+const ADSTERRA_DAILY_LIMIT = 120;
+const BLOGGER_DAILY_LIMIT = 50;
+
+function tierBadgeLabel(tier: string) {
+  switch (tier) {
+    case "tier1":
+      return "PREMIUM TIER 1";
+    case "tier2":
+      return "PREMIUM TIER 2";
+    default:
+      return "FREE USER";
+  }
+}
+
+function AnalyticsCard({
+  logo,
+  logoClass,
+  value,
+  valueClass,
+  subtitle,
+  label,
+  labelClass,
+  progress,
+}: {
+  logo: string;
+  logoClass: string;
+  value: number;
+  valueClass: string;
+  subtitle: string;
+  label: string;
+  labelClass: string;
+  progress?: number;
+}) {
+  return (
+    <div className="dashboard-analytics-card">
+      <div
+        className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold text-white ${logoClass}`}
+      >
+        {logo}
+      </div>
+      <p className={`mt-3 text-3xl font-bold leading-none ${valueClass}`}>
+        {formatCoins(value)}
+      </p>
+      <p className="mt-1 text-xs text-slate-500">{subtitle}</p>
+      {progress !== undefined && (
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200">
+          <div
+            className="h-full rounded-full bg-violet-500 transition-all"
+            style={{ width: `${Math.min(progress, 100)}%` }}
+          />
+        </div>
+      )}
+      <p className={`mt-3 text-xs font-semibold tracking-wide ${labelClass}`}>
+        {label}
+      </p>
+    </div>
+  );
+}
 
 export default async function DashboardPage() {
   const { profile } = await requireApprovedUser();
   const supabase = createAdminClient();
 
-  const [{ data: campaigns }, { data: transactions }, { data: promotions }] =
-    await Promise.all([
-      supabase
-        .from("campaigns")
-        .select("id, status, current_impressions, target_impressions")
-        .eq("user_id", profile.id),
-      supabase
-        .from("coin_transactions")
-        .select("*")
-        .eq("user_id", profile.id)
-        .order("created_at", { ascending: false })
-        .limit(5),
-      supabase
-        .from("promotions")
-        .select("id, title, status")
-        .eq("user_id", profile.id)
-        .order("created_at", { ascending: false })
-        .limit(5),
-    ]);
+  const today = new Date().toISOString().split("T")[0];
+  const todayStart = `${today}T00:00:00.000Z`;
 
-  const activeCampaigns =
-    campaigns?.filter((c) => c.status === "active").length || 0;
-  const totalImpressions =
-    campaigns?.reduce((sum, c) => sum + c.current_impressions, 0) || 0;
+  const [
+    { count: adsterraTasksToday },
+    { count: bloggerTasksToday },
+    { count: adsterraCampaigns },
+    { count: bloggerCampaigns },
+    { count: onlineMembers },
+  ] = await Promise.all([
+    supabase
+      .from("task_completions")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", profile.id)
+      .eq("task_type", "runner_view")
+      .gte("created_at", todayStart),
+    supabase
+      .from("task_completions")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", profile.id)
+      .eq("task_type", "platform_task")
+      .gte("created_at", todayStart),
+    supabase
+      .from("campaigns")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "active"),
+    supabase
+      .from("campaigns")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", profile.id)
+      .eq("status", "active"),
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("account_status", "approved"),
+  ]);
 
-  const tierLabels = {
-    free: "Free",
-    tier1: "Premium Tier 1",
-    tier2: "Premium Tier 2",
-  };
+  const adsterraCompleted = adsterraTasksToday || 0;
+  const bloggerCompleted = bloggerTasksToday || 0;
+  const adsterraLeft = Math.max(ADSTERRA_DAILY_LIMIT - adsterraCompleted, 0);
+  const bloggerLeft = Math.max(BLOGGER_DAILY_LIMIT - bloggerCompleted, 0);
+  const adsterraProgress =
+    (adsterraCompleted / ADSTERRA_DAILY_LIMIT) * 100;
+  const bloggerProgress = (bloggerCompleted / BLOGGER_DAILY_LIMIT) * 100;
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-600">Welcome back, {profile.full_name || profile.email}</p>
-      </div>
+    <div className="dashboard-page safe-top -mx-4 space-y-6 px-4 sm:-mx-6 sm:px-6">
+      <header className="flex items-start justify-between gap-3 pt-2">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm text-slate-600">Welcome Back,</p>
+            <span className="mt-1 inline-block rounded-full bg-violet-100 px-3 py-0.5 text-[11px] font-bold tracking-wide text-violet-700">
+              {tierBadgeLabel(profile.premium_tier)}
+            </span>
+          </div>
+        </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-              <Coins className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Coin Balance</p>
-              <p className="text-xl font-bold">{formatCoins(profile.coin_balance)}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
-              <Megaphone className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Active Campaigns</p>
-              <p className="text-xl font-bold">{activeCampaigns}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-              <Activity className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Total Impressions</p>
-              <p className="text-xl font-bold">{formatCoins(totalImpressions)}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
-              <Crown className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Premium Tier</p>
-              <p className="text-lg font-bold">{tierLabels[profile.premium_tier]}</p>
-            </div>
-          </div>
-        </Card>
-      </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-sm"
+            aria-label="Language"
+          >
+            EN
+          </button>
+          <Link
+            href="/premium"
+            className="flex items-center gap-1.5 rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs font-bold text-violet-700 shadow-sm"
+          >
+            <span aria-hidden className="text-base leading-none">
+              🏅
+            </span>
+            PREMIUM
+          </Link>
+        </div>
+      </header>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Account Status">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600">Status</span>
-              {statusBadge(profile.account_status)}
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600">Premium</span>
-              <Badge variant="premium">{tierLabels[profile.premium_tier]}</Badge>
-            </div>
-            <DailyLoginButton lastLogin={profile.last_daily_login} />
+      <section className="dashboard-balance-card relative overflow-hidden rounded-3xl p-5 text-white shadow-xl">
+        <div className="dashboard-balance-card__waves" aria-hidden />
+        <div className="relative z-10 flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-white/80">
+              YOUR BALANCE
+            </p>
+            <p className="mt-2 text-4xl font-bold leading-tight">
+              {formatCoins(profile.coin_balance)}{" "}
+              <span className="text-2xl font-semibold">Points</span>
+            </p>
           </div>
-        </Card>
-
-        <Card
-          title="Quick Actions"
-          description="Get started with these common tasks"
-        >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Link href="/promotions/create">
-              <Button variant="outline" className="w-full">
-                <Gift className="h-4 w-4" />
-                Create Promotion
-              </Button>
-            </Link>
-            <Link href="/runner">
-              <Button variant="outline" className="w-full">
-                Start Runner
-              </Button>
-            </Link>
+          <div className="dashboard-coin-stack shrink-0" aria-hidden>
+            <span />
+            <span />
+            <span />
           </div>
-        </Card>
-      </div>
+        </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Recent Promotions">
-          {promotions && promotions.length > 0 ? (
-            <ul className="divide-y divide-slate-100">
-              {promotions.map((p) => (
-                <li key={p.id} className="flex items-center justify-between py-3">
-                  <span className="text-sm font-medium truncate">{p.title}</span>
-                  {statusBadge(p.status)}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-slate-500">No promotions yet.</p>
-          )}
-        </Card>
+        <div className="relative z-10 mt-8 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm text-white/90">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+            Online Members: {onlineMembers || 0}
+          </div>
+          <Link
+            href="/wallet"
+            className="rounded-full border border-white/30 bg-gradient-to-r from-violet-500 to-fuchsia-500 px-5 py-2 text-xs font-bold tracking-wide text-white shadow-lg"
+          >
+            BUY COIN
+          </Link>
+        </div>
+      </section>
 
-        <Card title="Activity History">
-          {transactions && transactions.length > 0 ? (
-            <ul className="divide-y divide-slate-100">
-              {transactions.map((tx) => (
-                <li key={tx.id} className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="text-sm font-medium">{tx.description || tx.transaction_type}</p>
-                    <p className="text-xs text-slate-500">{formatDate(tx.created_at)}</p>
-                  </div>
-                  <span
-                    className={`text-sm font-semibold ${
-                      tx.amount >= 0 ? "text-emerald-600" : "text-red-600"
-                    }`}
-                  >
-                    {tx.amount >= 0 ? "+" : ""}
-                    {tx.amount}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-slate-500">No activity yet.</p>
-          )}
-        </Card>
-      </div>
+      <section>
+        <h2 className="mb-4 text-lg font-bold text-slate-900">
+          Real-time Analytics
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <AnalyticsCard
+            logo="A"
+            logoClass="bg-red-500"
+            value={adsterraCompleted}
+            valueClass="text-slate-900"
+            subtitle={`${adsterraLeft} Left`}
+            label="Adsterra Task"
+            labelClass="text-violet-600"
+            progress={adsterraProgress}
+          />
+          <AnalyticsCard
+            logo="A"
+            logoClass="bg-red-500"
+            value={adsterraCampaigns || 0}
+            valueClass="text-emerald-600"
+            subtitle="Active Campaigns"
+            label="ADSTERRA"
+            labelClass="text-emerald-600"
+          />
+          <AnalyticsCard
+            logo="B"
+            logoClass="bg-orange-500"
+            value={bloggerCompleted}
+            valueClass="text-slate-900"
+            subtitle={`${bloggerLeft} Left`}
+            label="Blogger Task"
+            labelClass="text-orange-500"
+            progress={bloggerProgress}
+          />
+          <AnalyticsCard
+            logo="B"
+            logoClass="bg-orange-500"
+            value={bloggerCampaigns || 0}
+            valueClass="text-orange-500"
+            subtitle="Active Campaigns"
+            label="BLOGGER"
+            labelClass="text-orange-500"
+          />
+        </div>
+      </section>
     </div>
   );
 }
