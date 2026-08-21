@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ErrorMessage, SuccessMessage } from "@/components/ui/states";
 import { calculateCampaignCost } from "@/lib/utils";
 import { Coins } from "lucide-react";
+import { useOnAppRefresh } from "@/lib/app-refresh";
 
 export default function CreatePromotionPage() {
   const [form, setForm] = useState({
@@ -22,7 +23,7 @@ export default function CreatePromotionPage() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     fetch("/api/config")
       .then((r) => r.json())
       .then((d) => {
@@ -36,6 +37,12 @@ export default function CreatePromotionPage() {
         if (d.balance !== undefined) setBalance(d.balance);
       });
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useOnAppRefresh(load);
 
   const cost = calculateCampaignCost(form.targetImpressions, pricing);
 

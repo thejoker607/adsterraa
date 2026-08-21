@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { statusBadge } from "@/components/ui/badge";
 import { ErrorMessage, LoadingSpinner, SuccessMessage } from "@/components/ui/states";
 import { ExternalLink } from "lucide-react";
+import { useOnAppRefresh } from "@/lib/app-refresh";
 
 interface Campaign {
   id: string;
@@ -38,17 +39,19 @@ export default function AdminCampaignsPage() {
     targetImpressions: 1000,
   });
 
-  async function load() {
+  const load = useCallback(async () => {
     const res = await fetch("/api/admin/campaigns");
     const data = await res.json();
     setCampaigns(data.campaigns || []);
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
     void load();
-  }, []);
+  }, [load]);
+
+  useOnAppRefresh(load);
 
   async function handlePublish(e: React.FormEvent) {
     e.preventDefault();

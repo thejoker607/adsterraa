@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner, ErrorMessage, SuccessMessage } from "@/components/ui/states";
+import { useOnAppRefresh } from "@/lib/app-refresh";
 
 export default function AdminAccountPage() {
   const [loading, setLoading] = useState(true);
@@ -19,7 +20,7 @@ export default function AdminAccountPage() {
     confirmPassword: "",
   });
 
-  useEffect(() => {
+  const load = useCallback(() => {
     fetch("/api/admin/account")
       .then((r) => r.json())
       .then((d) => {
@@ -33,6 +34,12 @@ export default function AdminAccountPage() {
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useOnAppRefresh(load);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

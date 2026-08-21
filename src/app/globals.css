@@ -44,3 +44,33 @@ html.native-app .safe-screen {
   padding-left: var(--safe-left);
   padding-right: var(--safe-right);
 }
+
+html,
+body {
+  overscroll-behavior-y: contain;
+}
+
+.pull-refresh-indicator {
+  top: max(10px, calc(var(--safe-top) + 8px));
+}
+
+html.native-app .pull-refresh-indicator {
+  top: max(12px, calc(max(var(--safe-top), 28px) + 4px));
+}
+
+/* Curved bottom navigation (mobile / Capacitor) */
+.curved-bottom-nav {
+  padding-bottom: var(--safe-bottom);
+}
+
+.curved-bottom-nav__slider {
+  width: 0;
+  height: 100px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .curved-bottom-nav__slider,
+  .curved-bottom-nav a span {
+    transition: none !important;
+  }
+}

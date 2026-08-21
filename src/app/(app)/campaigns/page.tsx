@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { statusBadge } from "@/components/ui/badge";
 import { LoadingSpinner, EmptyState } from "@/components/ui/states";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useOnAppRefresh } from "@/lib/app-refresh";
 
 interface Campaign {
   id: string;
@@ -26,7 +27,7 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     fetch("/api/campaigns")
       .then((r) => r.json())
       .then((d) => {
@@ -34,6 +35,12 @@ export default function CampaignsPage() {
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useOnAppRefresh(load);
 
   if (loading) return <LoadingSpinner />;
 

@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, getProfile } from "@/lib/auth/user";
 import { AppNavbar } from "@/components/layout/app-navbar";
+import { PullToRefresh } from "@/components/layout/pull-to-refresh";
+import { CurvedBottomNav } from "@/components/layout/curved-bottom-nav";
 
 export default async function AppLayout({
   children,
@@ -53,9 +55,14 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="min-h-screen">
-      <AppNavbar coinBalance={profile.coin_balance} />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">{children}</main>
-    </div>
+    <PullToRefresh>
+      <div className="min-h-screen">
+        <AppNavbar coinBalance={profile.coin_balance} />
+        <main className="mx-auto max-w-7xl px-4 py-6 pb-28 sm:px-6 sm:py-8 lg:pb-8">
+          {children}
+        </main>
+        <CurvedBottomNav />
+      </div>
+    </PullToRefresh>
   );
 }

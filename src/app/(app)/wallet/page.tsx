@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/states";
 import { formatCoins, formatDate } from "@/lib/utils";
 import { Coins } from "lucide-react";
+import { useOnAppRefresh } from "@/lib/app-refresh";
 
 interface Transaction {
   id: string;
@@ -19,7 +20,7 @@ export default function WalletPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     fetch("/api/wallet")
       .then((r) => r.json())
       .then((d) => {
@@ -28,6 +29,12 @@ export default function WalletPage() {
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useOnAppRefresh(load);
 
   if (loading) return <LoadingSpinner />;
 

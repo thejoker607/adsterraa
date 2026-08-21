@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner, SuccessMessage } from "@/components/ui/states";
+import { useOnAppRefresh } from "@/lib/app-refresh";
 
 interface ConfigItem {
   key: string;
@@ -31,7 +32,7 @@ export default function AdminConfigPage() {
   });
   const [runner, setRunner] = useState({ view_seconds: 20, min_view_seconds: 15 });
 
-  useEffect(() => {
+  const load = useCallback(() => {
     fetch("/api/admin/config")
       .then((r) => r.json())
       .then((d) => {
@@ -44,6 +45,12 @@ export default function AdminConfigPage() {
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useOnAppRefresh(load);
 
   async function save() {
     setSaving(true);

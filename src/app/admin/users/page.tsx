@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge, statusBadge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/states";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatDate } from "@/lib/utils";
+import { useOnAppRefresh } from "@/lib/app-refresh";
 
 interface User {
   id: string;
@@ -25,17 +26,19 @@ export default function AdminUsersPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [coinAdjust, setCoinAdjust] = useState<{ userId: string; amount: string; reason: string } | null>(null);
 
-  async function loadUsers() {
+  const loadUsers = useCallback(async () => {
     const res = await fetch("/api/admin/users");
     const data = await res.json();
     setUsers(data.users || []);
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
     void loadUsers();
-  }, []);
+  }, [loadUsers]);
+
+  useOnAppRefresh(loadUsers);
 
   async function performAction(userId: string, action: string, value?: unknown) {
     setActionLoading(true);

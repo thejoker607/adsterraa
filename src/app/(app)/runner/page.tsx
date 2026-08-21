@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingSpinner, ErrorMessage, EmptyState } from "@/components/ui/states";
 import { RunnerBrowser } from "@/components/runner/runner-browser";
 import { AlertTriangle, Play } from "lucide-react";
+import { useOnAppRefresh } from "@/lib/app-refresh";
 
 interface Promotion {
   title: string;
@@ -46,8 +47,8 @@ export default function RunnerPage() {
   const viewTimerRef = useRef<NodeJS.Timeout | null>(null);
   const autoCompletedRef = useRef<string | null>(null);
 
-  const loadSession = useCallback(async () => {
-    setLoading(true);
+  const loadSession = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const res = await fetch("/api/runner");
     const data = await res.json();
     setLoading(false);
@@ -66,6 +67,13 @@ export default function RunnerPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
     void loadSession();
   }, [loadSession]);
+
+  const refreshSession = useCallback(() => {
+    if (document.querySelector("[data-no-pull-refresh]")) return;
+    void loadSession(true);
+  }, [loadSession]);
+
+  useOnAppRefresh(refreshSession);
 
   useEffect(() => {
     if (!session?.id) return;
