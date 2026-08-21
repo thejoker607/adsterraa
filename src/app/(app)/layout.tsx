@@ -58,7 +58,7 @@ export default async function AppLayout({
     <PullToRefresh>
       <div className="min-h-screen">
         <AppNavbar coinBalance={profile.coin_balance} />
-        <main className="mx-auto max-w-7xl px-4 py-6 pb-28 sm:px-6 sm:py-8 lg:pb-8">
+        <main className="mx-auto max-w-7xl px-4 py-6 pb-32 sm:px-6 sm:py-8 lg:pb-8">
           {children}
         </main>
         <CurvedBottomNav />
