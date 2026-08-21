@@ -61,6 +61,7 @@ html.native-app .pull-refresh-indicator {
 /* Curved bottom navigation (mobile / Capacitor) */
 .curved-bottom-nav {
   padding-bottom: var(--safe-bottom);
+  background: white;
 }
 
 .curved-bottom-nav__slider {
@@ -69,8 +70,7 @@ html.native-app .pull-refresh-indicator {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .curved-bottom-nav__slider,
-  .curved-bottom-nav a span {
+  .curved-bottom-nav [class*="transition-"] {
     transition: none !important;
   }
 }

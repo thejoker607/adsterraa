@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
   Play,
@@ -13,11 +14,15 @@ import {
 import { cn } from "@/lib/utils";
 
 const NAV_COLOR = "#4687FD";
+const BAR_HEIGHT = 56;
+const BUMP_RADIUS = 26;
+const BUMP_GUTTER = 18;
 
+/** Runner is the center (3rd) tab — the curved bump target. */
 const navItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/runner", label: "Runner", icon: Play },
   { href: "/promotions/create", label: "Create", icon: PlusCircle },
+  { href: "/runner", label: "Runner", icon: Play },
   { href: "/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/profile", label: "Profile", icon: User },
 ];
@@ -29,45 +34,75 @@ function getActiveIndex(pathname: string): number {
   return idx >= 0 ? idx : 0;
 }
 
-function tabCenterPercent(index: number): string {
-  return `${(2 * index + 1) * 10}%`;
+function buildBarPath(width: number, activeIndex: number): string {
+  const tabWidth = width / navItems.length;
+  const cx = tabWidth * activeIndex + tabWidth / 2;
+  const barLine = 14;
+  const left = cx - BUMP_RADIUS - BUMP_GUTTER;
+  const right = cx + BUMP_RADIUS + BUMP_GUTTER;
+
+  return [
+    `M 0 ${BAR_HEIGHT}`,
+    `L 0 ${barLine}`,
+    `L ${Math.max(0, left)} ${barLine}`,
+    `C ${left + 10} ${barLine} ${cx - BUMP_RADIUS} ${barLine} ${cx - BUMP_RADIUS} ${barLine + 10}`,
+    `A ${BUMP_RADIUS} ${BUMP_RADIUS} 0 0 0 ${cx + BUMP_RADIUS} ${barLine + 10}`,
+    `C ${cx + BUMP_RADIUS} ${barLine} ${right - 10} ${barLine} ${Math.min(width, right)} ${barLine}`,
+    `L ${width} ${barLine}`,
+    `L ${width} ${BAR_HEIGHT}`,
+    `Z`,
+  ].join(" ");
 }
 
 export function CurvedBottomNav() {
   const pathname = usePathname();
   const activeIndex = getActiveIndex(pathname);
-  const bubbleLeft = `calc(${tabCenterPercent(activeIndex)} - 22.5px)`;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(390);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    const update = () => setWidth(node.offsetWidth);
+    update();
+
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const tabWidth = width / navItems.length;
 
   return (
     <nav
-      className="curved-bottom-nav fixed inset-x-0 bottom-0 z-50 bg-white lg:hidden"
+      className="curved-bottom-nav fixed inset-x-0 bottom-0 z-50 lg:hidden"
       aria-label="Main navigation"
     >
-      <div className="relative mx-auto h-[88px] max-w-lg">
-        {/* Primary bar */}
-        <div
-          className="absolute inset-x-0 bottom-[38px] h-[52px] shadow-lg"
-          style={{ backgroundColor: NAV_COLOR }}
-        />
-
-        {/* Sliding curved notch */}
-        <div
-          className="curved-bottom-nav__slider pointer-events-none absolute bottom-0 transition-[left] duration-300 ease-out"
-          style={{ left: bubbleLeft }}
+      <div
+        ref={containerRef}
+        className="relative mx-auto h-[88px] max-w-lg overflow-visible bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
+      >
+        {/* Colored bar with smooth animated dip */}
+        <svg
+          className="absolute inset-x-0 top-0 h-[56px] w-full transition-none"
+          viewBox={`0 0 ${width} ${BAR_HEIGHT}`}
+          preserveAspectRatio="none"
+          aria-hidden
         >
-          <div
-            className="absolute bottom-[71px] right-[61.8px] h-[45px] w-[45px] rounded-full"
-            style={{ backgroundColor: NAV_COLOR }}
+          <path
+            d={buildBarPath(width, activeIndex)}
+            fill={NAV_COLOR}
+            className="transition-[d] duration-300 ease-out"
           />
-          <div className="absolute bottom-0 right-[100px] h-[100px] w-[200vw] rounded-[40px] bg-white" />
-          <div className="absolute bottom-0 -right-[343px] h-[100px] w-[200vw] rounded-[40px] bg-white" />
-        </div>
+        </svg>
 
         {/* Tab buttons */}
-        <div className="absolute inset-x-0 bottom-0 flex h-[88px] items-end justify-around px-1 pb-5">
+        <div className="absolute inset-x-0 top-0 flex h-[88px]">
           {navItems.map((item, index) => {
             const active = index === activeIndex;
             const Icon = item.icon;
+            const center = tabWidth * index + tabWidth / 2;
 
             return (
               <Link
@@ -75,31 +110,37 @@ export function CurvedBottomNav() {
                 href={item.href}
                 aria-label={item.label}
                 aria-current={active ? "page" : undefined}
-                className="relative flex w-1/5 flex-col items-center justify-end"
+                className="relative flex-1"
+                style={{ width: `${100 / navItems.length}%` }}
               >
                 <span
                   className={cn(
-                    "flex h-11 w-11 items-center justify-center rounded-full transition-all duration-300 ease-out",
-                    active ? "-translate-y-7" : "translate-y-0"
+                    "absolute flex items-center justify-center transition-all duration-300 ease-out",
+                    active
+                      ? "h-[45px] w-[45px] -translate-x-1/2 -translate-y-1/2 text-white"
+                      : "h-8 w-8 -translate-x-1/2 text-slate-900"
                   )}
-                  style={active ? { backgroundColor: NAV_COLOR } : undefined}
+                  style={{
+                    left: center,
+                    top: active ? 30 : 24,
+                  }}
                 >
                   <Icon
                     className={cn(
                       "transition-all duration-300 ease-out",
-                      active ? "h-[25px] w-[25px] text-white" : "h-[30px] w-[30px] text-slate-900"
+                      active ? "h-[25px] w-[25px]" : "h-[30px] w-[30px]"
                     )}
-                    strokeWidth={active ? 2 : 1.75}
+                    strokeWidth={active ? 2.25 : 1.75}
                   />
                 </span>
-                <span
-                  className={cn(
-                    "mt-1 text-[10px] font-medium transition-opacity duration-200",
-                    active ? "opacity-0" : "text-slate-600 opacity-100"
-                  )}
-                >
-                  {item.label}
-                </span>
+                {!active && (
+                  <span
+                    className="absolute -translate-x-1/2 text-[10px] font-medium leading-none text-slate-600"
+                    style={{ left: center, top: 54 }}
+                  >
+                    {item.label}
+                  </span>
+                )}
               </Link>
             );
           })}

@@ -14,6 +14,7 @@ function scrollTop() {
 }
 
 function canStartPull(target: EventTarget | null) {
+  if (document.querySelector("[data-no-pull-refresh]")) return false;
   if (scrollTop() > 2) return false;
   if (!(target instanceof Element)) return true;
   if (target.closest("[data-no-pull-refresh]")) return false;

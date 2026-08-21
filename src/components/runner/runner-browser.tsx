@@ -30,6 +30,7 @@ interface RunnerBrowserProps {
   completing: boolean;
   error: string;
   onAbandon: () => void;
+  onComplete: () => void;
 }
 
 export function RunnerBrowser({
@@ -41,15 +42,27 @@ export function RunnerBrowser({
   completing,
   error,
   onAbandon,
+  onComplete,
 }: RunnerBrowserProps) {
   const promo = currentTask.promotions;
-  const [iframeLoading, setIframeLoading] = useState(true);
-  const [iframeError, setIframeError] = useState(false);
+  const frameKey = `${currentTask.id}:${promo.url}`;
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const iframeError = errorKey === frameKey;
+  const iframeLoading = loadedKey !== frameKey && !iframeError;
 
   useEffect(() => {
-    setIframeLoading(true);
-    setIframeError(false);
-  }, [currentTask.id, promo.url]);
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+    };
+  }, []);
 
   const timerReady = countdown === 0 && viewDuration >= currentTask.required_view_seconds;
 
@@ -74,19 +87,21 @@ export function RunnerBrowser({
           </div>
 
           <div className="shrink-0 text-right">
-            <div
-              className={`text-lg font-bold tabular-nums ${
-                timerReady ? "text-emerald-600" : "text-indigo-600"
-              }`}
-            >
-              {completing ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : timerReady ? (
-                "Done"
-              ) : (
-                `${countdown}s`
-              )}
-            </div>
+            {completing ? (
+              <Loader2 className="ml-auto h-5 w-5 animate-spin text-emerald-600" />
+            ) : timerReady ? (
+              <Button
+                size="sm"
+                onClick={onComplete}
+                className="bg-emerald-600 text-white hover:bg-emerald-500"
+              >
+                Done
+              </Button>
+            ) : (
+              <div className="text-lg font-bold tabular-nums text-indigo-600">
+                {countdown}s
+              </div>
+            )}
             <p className="text-[10px] text-slate-500">
               {currentTask.required_view_seconds}s view
             </p>
@@ -105,7 +120,7 @@ export function RunnerBrowser({
         </div>
       </header>
 
-      <div className="relative min-h-0 flex-1 bg-slate-100">
+      <div className="relative min-h-0 flex-1 overflow-hidden overscroll-none bg-slate-100">
         {iframeLoading && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
@@ -126,14 +141,11 @@ export function RunnerBrowser({
             key={currentTask.id}
             src={promo.url}
             title={promo.title}
-            className="h-full w-full border-0 bg-white"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+            className="h-full w-full border-0 bg-white [touch-action:pan-y]"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
             referrerPolicy="no-referrer-when-downgrade"
-            onLoad={() => setIframeLoading(false)}
-            onError={() => {
-              setIframeLoading(false);
-              setIframeError(true);
-            }}
+            onLoad={() => setLoadedKey(frameKey)}
+            onError={() => setErrorKey(frameKey)}
           />
         )}
       </div>
@@ -150,13 +162,19 @@ export function RunnerBrowser({
             {completing
               ? "Moving to next promotion..."
               : timerReady
-                ? "Opening next promotion..."
+                ? "Tap Done to continue"
                 : `Viewing ${viewDuration}s / ${currentTask.required_view_seconds}s`}
           </p>
-          <p className="flex items-center gap-1 text-xs text-amber-700">
-            <AlertTriangle className="h-3.5 w-3.5" />
-            Stay on this screen
-          </p>
+          {timerReady && !completing ? (
+            <Button size="sm" onClick={onComplete}>
+              Done
+            </Button>
+          ) : (
+            <p className="flex items-center gap-1 text-xs text-amber-700">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Stay on this screen
+            </p>
+          )}
         </div>
       </footer>
     </div>

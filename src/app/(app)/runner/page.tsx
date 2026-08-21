@@ -46,6 +46,12 @@ export default function RunnerPage() {
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const viewTimerRef = useRef<NodeJS.Timeout | null>(null);
   const autoCompletedRef = useRef<string | null>(null);
+  const completingRef = useRef(false);
+  const viewDurationRef = useRef(0);
+  const sessionIdRef = useRef<string | null>(null);
+  const sessionStatusRef = useRef<string | null>(null);
+  const leftIntentionallyRef = useRef(false);
+  const leaveMountsRef = useRef(0);
 
   const loadSession = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -76,6 +82,15 @@ export default function RunnerPage() {
   useOnAppRefresh(refreshSession);
 
   useEffect(() => {
+    sessionIdRef.current = session?.id ?? null;
+    sessionStatusRef.current = session?.status ?? null;
+  }, [session]);
+
+  useEffect(() => {
+    viewDurationRef.current = viewDuration;
+  }, [viewDuration]);
+
+  useEffect(() => {
     if (!session?.id) return;
 
     heartbeatRef.current = setInterval(() => {
@@ -91,24 +106,67 @@ export default function RunnerPage() {
     };
   }, [session?.id]);
 
+  const abandonOnLeave = useCallback(() => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId || sessionStatusRef.current !== "active") return;
+    if (leftIntentionallyRef.current) return;
+    leftIntentionallyRef.current = true;
+    sessionStatusRef.current = "abandoned";
+    fetch("/api/runner/session", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId }),
+      keepalive: true,
+    });
+  }, []);
+
   useEffect(() => {
-    const handleLeave = () => {
-      if (session?.id && session.status === "active") {
-        fetch("/api/runner/session", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: session.id }),
-          keepalive: true,
-        });
+    let hideTimer: number | undefined;
+
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        hideTimer = window.setTimeout(() => abandonOnLeave(), 500);
+      } else if (hideTimer) {
+        window.clearTimeout(hideTimer);
+        hideTimer = undefined;
       }
     };
 
-    window.addEventListener("beforeunload", handleLeave);
+    window.addEventListener("pagehide", abandonOnLeave);
+    window.addEventListener("beforeunload", abandonOnLeave);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    leaveMountsRef.current += 1;
+
     return () => {
-      window.removeEventListener("beforeunload", handleLeave);
-      handleLeave();
+      if (hideTimer) window.clearTimeout(hideTimer);
+      window.removeEventListener("pagehide", abandonOnLeave);
+      window.removeEventListener("beforeunload", abandonOnLeave);
+      document.removeEventListener("visibilitychange", onVisibility);
+      leaveMountsRef.current -= 1;
+      queueMicrotask(() => {
+        if (leaveMountsRef.current === 0) abandonOnLeave();
+      });
     };
-  }, [session]);
+  }, [abandonOnLeave]);
+
+  useEffect(() => {
+    if (!session?.id || session.status !== "active") return;
+
+    const trapBack = () => {
+      window.history.pushState({ runnerLock: true }, "", window.location.href);
+    };
+    trapBack();
+
+    const onPopState = () => {
+      trapBack();
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, [session?.id, session?.status]);
 
   useEffect(() => {
     if (!currentTask || currentTask.status !== "in_progress") return;
@@ -117,6 +175,7 @@ export default function RunnerPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sync timer state to new task
     setCountdown(currentTask.required_view_seconds);
     setViewDuration(0);
+    viewDurationRef.current = 0;
 
     timerRef.current = setInterval(() => {
       setCountdown((c) => Math.max(0, c - 1));
@@ -134,7 +193,8 @@ export default function RunnerPage() {
   }, [currentTask?.id, currentTask?.status, currentTask?.required_view_seconds]);
 
   const completeTask = useCallback(async () => {
-    if (!currentTask || !session || completing) return;
+    if (!currentTask || !session || completingRef.current) return;
+    completingRef.current = true;
     setCompleting(true);
     setError("");
 
@@ -144,19 +204,25 @@ export default function RunnerPage() {
       body: JSON.stringify({
         taskId: currentTask.id,
         sessionId: session.id,
-        viewDuration,
+        viewDuration: viewDurationRef.current,
       }),
     });
 
     const data = await res.json();
-    setCompleting(false);
 
     if (!res.ok) {
+      completingRef.current = false;
+      setCompleting(false);
+      autoCompletedRef.current = null;
       setError(data.error);
       return;
     }
 
     if (data.sessionComplete) {
+      leftIntentionallyRef.current = true;
+      sessionStatusRef.current = "completed";
+      completingRef.current = false;
+      setCompleting(false);
       setSession(null);
       setTasks([]);
       setCurrentTask(null);
@@ -168,6 +234,10 @@ export default function RunnerPage() {
     }
 
     if (data.nextTask) {
+      autoCompletedRef.current = null;
+      setCountdown(data.nextTask.required_view_seconds);
+      setViewDuration(0);
+      viewDurationRef.current = 0;
       setCurrentTask(data.nextTask);
       setSession((s) =>
         s ? { ...s, current_index: data.nextTask.order_index } : s
@@ -181,8 +251,10 @@ export default function RunnerPage() {
               : task
         )
       );
+      completingRef.current = false;
+      setCompleting(false);
     }
-  }, [completing, currentTask, session, viewDuration]);
+  }, [currentTask, session]);
 
   useEffect(() => {
     if (!currentTask || currentTask.status !== "in_progress") return;
@@ -198,6 +270,7 @@ export default function RunnerPage() {
     setStarting(true);
     setError("");
     setSessionCompleteMessage("");
+    leftIntentionallyRef.current = false;
     const res = await fetch("/api/runner", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -220,6 +293,8 @@ export default function RunnerPage() {
 
   async function abandonSession() {
     if (!session) return;
+    leftIntentionallyRef.current = true;
+    sessionStatusRef.current = "abandoned";
     await fetch("/api/runner/session", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -316,6 +391,7 @@ export default function RunnerPage() {
       completing={completing}
       error={error}
       onAbandon={abandonSession}
+      onComplete={completeTask}
     />
   );
 }

@@ -10,12 +10,9 @@ import {
   Wallet,
   Crown,
   User,
-  LogOut,
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -29,14 +26,8 @@ const navItems = [
 
 export function AppNavbar({ coinBalance }: { coinBalance?: number }) {
   const pathname = usePathname();
-  const router = useRouter();
-
-  async function handleLogout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  }
+  const premiumActive =
+    pathname === "/premium" || pathname.startsWith("/premium/");
 
   return (
     <header className="safe-top sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
@@ -58,13 +49,19 @@ export function AppNavbar({ coinBalance }: { coinBalance?: number }) {
               {coinBalance.toLocaleString()} coins
             </Link>
           )}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm text-slate-600 hover:bg-slate-100 sm:px-3"
+          <Link
+            href="/premium"
+            aria-label="Premium"
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm sm:px-3",
+              premiumActive
+                ? "bg-indigo-50 text-indigo-600"
+                : "text-slate-600 hover:bg-slate-100"
+            )}
           >
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Logout</span>
-          </button>
+            <Crown className="h-4 w-4" />
+            <span className="hidden sm:inline">Premium</span>
+          </Link>
         </div>
       </div>
 
