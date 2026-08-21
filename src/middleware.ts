@@ -23,7 +23,7 @@ async function isValidAdminSession(request: NextRequest): Promise<boolean> {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const publicPaths = ["/", "/login", "/register"];
+  const publicPaths = ["/login", "/register"];
   const isPublic = publicPaths.includes(pathname);
   const isAdminRoute = pathname.startsWith("/admin");
   const isLegacyAdminLogin = pathname === "/admin/login";
@@ -40,7 +40,7 @@ export async function middleware(request: NextRequest) {
 
     const adminValid = await isValidAdminSession(request);
 
-    if (pathname === "/login" || pathname === "/register") {
+    if (pathname === "/" || pathname === "/login" || pathname === "/register") {
       if (adminValid) {
         return NextResponse.redirect(new URL("/admin", request.url));
       }
@@ -90,7 +90,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    if (user && (pathname === "/login" || pathname === "/register")) {
+    if (user && (pathname === "/" || pathname === "/login" || pathname === "/register")) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 

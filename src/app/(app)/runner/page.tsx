@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner, ErrorMessage, EmptyState } from "@/components/ui/states";
-import { ExternalLink, Play, AlertTriangle } from "lucide-react";
+import { RunnerBrowser } from "@/components/runner/runner-browser";
+import { AlertTriangle, Play } from "lucide-react";
 
 interface Promotion {
   title: string;
@@ -40,9 +40,11 @@ export default function RunnerPage() {
   const [viewDuration, setViewDuration] = useState(0);
   const [completing, setCompleting] = useState(false);
   const [sessionSize, setSessionSize] = useState<20 | 30 | 60>(20);
+  const [sessionCompleteMessage, setSessionCompleteMessage] = useState("");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const viewTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoCompletedRef = useRef<string | null>(null);
 
   const loadSession = useCallback(async () => {
     setLoading(true);
@@ -103,6 +105,7 @@ export default function RunnerPage() {
   useEffect(() => {
     if (!currentTask || currentTask.status !== "in_progress") return;
 
+    autoCompletedRef.current = null;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sync timer state to new task
     setCountdown(currentTask.required_view_seconds);
     setViewDuration(0);
@@ -122,31 +125,8 @@ export default function RunnerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset timers when task changes
   }, [currentTask?.id, currentTask?.status, currentTask?.required_view_seconds]);
 
-  async function startSession() {
-    setStarting(true);
-    setError("");
-    const res = await fetch("/api/runner", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionSize }),
-    });
-    const data = await res.json();
-    setStarting(false);
-
-    if (!res.ok) {
-      setError(data.error);
-      return;
-    }
-
-    setSession(data.session);
-    setTasks(data.tasks);
-    setCurrentTask(
-      data.tasks.find((t: RunnerTask) => t.status === "in_progress") || data.tasks[0]
-    );
-  }
-
-  async function completeTask() {
-    if (!currentTask || !session) return;
+  const completeTask = useCallback(async () => {
+    if (!currentTask || !session || completing) return;
     setCompleting(true);
     setError("");
 
@@ -173,7 +153,9 @@ export default function RunnerPage() {
       setTasks([]);
       setCurrentTask(null);
       setError("");
-      alert(`Session complete! You earned coins for completed views.`);
+      setSessionCompleteMessage(
+        `Session complete! You earned coins for completed views.`
+      );
       return;
     }
 
@@ -182,7 +164,50 @@ export default function RunnerPage() {
       setSession((s) =>
         s ? { ...s, current_index: data.nextTask.order_index } : s
       );
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === currentTask.id
+            ? { ...task, status: "completed" }
+            : task.id === data.nextTask.id
+              ? { ...task, status: "in_progress" }
+              : task
+        )
+      );
     }
+  }, [completing, currentTask, session, viewDuration]);
+
+  useEffect(() => {
+    if (!currentTask || currentTask.status !== "in_progress") return;
+    if (countdown > 0 || completing) return;
+    if (viewDuration < currentTask.required_view_seconds) return;
+    if (autoCompletedRef.current === currentTask.id) return;
+
+    autoCompletedRef.current = currentTask.id;
+    void completeTask();
+  }, [countdown, completing, currentTask, viewDuration, completeTask]);
+
+  async function startSession() {
+    setStarting(true);
+    setError("");
+    setSessionCompleteMessage("");
+    const res = await fetch("/api/runner", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionSize }),
+    });
+    const data = await res.json();
+    setStarting(false);
+
+    if (!res.ok) {
+      setError(data.error);
+      return;
+    }
+
+    setSession(data.session);
+    setTasks(data.tasks);
+    setCurrentTask(
+      data.tasks.find((t: RunnerTask) => t.status === "in_progress") || data.tasks[0]
+    );
   }
 
   async function abandonSession() {
@@ -195,6 +220,7 @@ export default function RunnerPage() {
     setSession(null);
     setTasks([]);
     setCurrentTask(null);
+    setError("");
   }
 
   if (loading) return <LoadingSpinner />;
@@ -208,16 +234,23 @@ export default function RunnerPage() {
         <div>
           <h1 className="text-2xl font-bold">Runner</h1>
           <p className="text-slate-600">
-            View clearly labeled user promotions one at a time. Earn coins for
-            completing legitimate view sessions.
+            View clearly labeled user promotions one at a time inside the app
+            browser. Each link opens automatically and advances when the view
+            time is complete.
           </p>
         </div>
+
+        {sessionCompleteMessage && (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {sessionCompleteMessage}
+          </div>
+        )}
 
         <Card title="Start a Session">
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
             <AlertTriangle className="inline h-4 w-4 mr-1" />
-            Leaving this page during a session marks the current task incomplete
-            with no reward.
+            Promotions open inside the app browser. Do not leave the runner
+            screen during a session.
           </div>
 
           {error && <div className="mb-4"><ErrorMessage message={error} /></div>}
@@ -265,84 +298,16 @@ export default function RunnerPage() {
     );
   }
 
-  const promo = currentTask.promotions;
-  const canComplete = countdown === 0 && viewDuration >= currentTask.required_view_seconds;
-
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Runner</h1>
-          <p className="text-sm text-slate-600">
-            Promotion {currentTask.order_index + 1} of {tasks.length}
-          </p>
-        </div>
-        <Button variant="ghost" size="sm" onClick={abandonSession}>
-          End Session
-        </Button>
-      </div>
-
-      <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-        <div
-          className="h-full bg-indigo-600 transition-all duration-500"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-
-      {error && <ErrorMessage message={error} />}
-
-      <Card>
-        <div className="mb-4 flex items-center gap-2">
-          <Badge variant="warning">Sponsored Promotion</Badge>
-          <Badge variant="info">+{currentTask.reward_coins} coins on completion</Badge>
-        </div>
-
-        <h2 className="text-xl font-bold text-slate-900">{promo.title}</h2>
-        {promo.description && (
-          <p className="mt-2 text-slate-600">{promo.description}</p>
-        )}
-
-        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Promotional Link
-          </p>
-          <a
-            href={promo.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 flex items-center gap-2 text-indigo-600 hover:underline break-all"
-          >
-            {promo.url}
-            <ExternalLink className="h-4 w-4 shrink-0" />
-          </a>
-        </div>
-
-        <div className="mt-6 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-5xl font-bold tabular-nums text-indigo-600">
-              {countdown}
-            </div>
-            <p className="mt-1 text-sm text-slate-500">
-              seconds remaining (view for {currentTask.required_view_seconds}s)
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-6 flex gap-3">
-          <Button
-            onClick={completeTask}
-            disabled={!canComplete}
-            loading={completing}
-            className="flex-1"
-          >
-            {canComplete ? "Complete & Next" : "Keep Viewing..."}
-          </Button>
-        </div>
-
-        <p className="mt-4 text-center text-xs text-slate-500">
-          Do not refresh or leave this page. Incomplete tasks receive no reward.
-        </p>
-      </Card>
-    </div>
+    <RunnerBrowser
+      tasks={tasks}
+      currentTask={currentTask}
+      countdown={countdown}
+      viewDuration={viewDuration}
+      progress={progress}
+      completing={completing}
+      error={error}
+      onAbandon={abandonSession}
+    />
   );
 }
